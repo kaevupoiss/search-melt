@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { createCombobox, createSelect, createTagsInput, melt } from '@melt-ui/svelte';
 	import { Command, Search, X as Close, Check } from 'lucide-svelte';
-	import { fade, fly } from 'svelte/transition';
+	import { flip } from 'svelte/animate';
+	import { cubicIn, cubicOut, quintOut } from 'svelte/easing';
+	import { crossfade, fade, fly, slide } from 'svelte/transition';
 
 	const {
 		elements: { menu, input, option, label },
@@ -14,9 +16,20 @@
 		elements: { root, tag, deleteTrigger },
 		states: { tags }
 	} = createTagsInput({
-		defaultTags: ['Caramel', 'Chocolate'],
+		defaultTags: [
+			{
+				id: 'add',
+				value: 'add'
+			}
+		],
 		add(tag) {
 			return { id: tag, value: tag };
+		},
+
+		remove: async (tag) => {
+			selected.set($selected?.filter((select) => select.value !== tag.id) ?? []);
+
+			return true;
 		}
 	});
 
@@ -32,15 +45,35 @@
 
 	const {
 		elements: { trigger: selectTrigger, menu: selectMenu, option: selectOption },
-		states: { selectedLabel, open: selectOpen },
+		states: { selected, open: selectOpen },
 		helpers: { isSelected }
-	} = createSelect({
+	} = createSelect<string, true>({
 		forceVisible: true,
 		positioning: {
-			placement: 'bottom-end',
-			fitViewport: true
+			placement: 'bottom-end'
 		},
-		multiple: true
+		multiple: true,
+		onSelectedChange: ({ curr, next }) => {
+			if ((curr?.length ?? 0) > (next?.length ?? 0)) return next;
+
+			const newTags =
+				next?.map((item) => {
+					return { id: item.value, value: item.value };
+				}) ?? [];
+
+			tags.set(
+				newTags.concat({
+					id: 'add',
+					value: 'add'
+				})
+			);
+
+			setTimeout(() => {
+				animateAddNewButton = !animateAddNewButton;
+			}, 160);
+
+			return next;
+		}
 	});
 
 	const colors = {
@@ -48,6 +81,20 @@
 		blue: '#4e8fce',
 		grey: '#ebebeb'
 	};
+
+	let animateAddNewButton = false;
+
+	const [send, receive] = crossfade({
+		fallback() {
+			return {
+				duration: 100,
+				easing: cubicOut,
+				css: (t) => `
+					opacity: ${t};
+				`
+			};
+		}
+	});
 </script>
 
 <div class="wrapper">
@@ -74,17 +121,28 @@
 			<div class="filters">
 				<p>Searching For</p>
 				<div class="tags" use:melt={$root}>
-					{#each $tags as t}
-						<div class="tag" use:melt={$tag(t)}>
-							<p>{t.value}</p>
-							<button use:melt={$deleteTrigger(t)}>
-								<Close size={16} />
-							</button>
+					{#each $tags as t (t.id)}
+						<div
+							class="animate"
+							animate:flip={{ duration: 150 }}
+							in:receive={{ key: t.id, delay: 0, duration: 1500, easing: cubicIn }}
+							out:send={{ key: t.id, delay: 0, duration: 1500, easing: cubicIn }}
+						>
+							{#if t.id === 'add'}
+								<button class="add-filter" use:melt={$selectTrigger} class:active={$selectOpen}>
+									<div class="inside-border">Add New</div>
+								</button>
+							{:else}
+								<div class="tag" use:melt={$tag(t)}>
+									<p>{t.value}</p>
+									<button use:melt={$deleteTrigger(t)}>
+										<Close size={16} />
+									</button>
+								</div>
+							{/if}
 						</div>
 					{/each}
-					<button class="add-filter" use:melt={$selectTrigger} class:active={$selectOpen}>
-						<div class="inside-border">Add New</div>
-					</button>
+
 					{#if $selectOpen}
 						<div
 							class="select-dropdown"
@@ -187,7 +245,7 @@
 		flex-direction: column;
 		border-radius: 1rem;
 		border: 1px solid $grey;
-		height: 10rem;
+		height: 20rem;
 
 		background-color: white;
 
@@ -205,7 +263,9 @@
 
 	.tags {
 		display: flex;
+		flex-wrap: wrap;
 		column-gap: 0.5rem;
+		row-gap: 0.5rem;
 	}
 
 	.tag {
@@ -259,7 +319,7 @@
 		z-index: 10;
 		display: flex;
 		flex-direction: column;
-		max-height: 100px;
+		max-height: 250px;
 		overflow: hidden;
 		width: 200px;
 		border: 1px solid $grey;
@@ -271,7 +331,6 @@
 
 	.select-header {
 		border-bottom: 1px solid $grey;
-
 		padding: 1rem;
 	}
 
