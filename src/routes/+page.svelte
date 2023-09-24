@@ -2,9 +2,9 @@
 	import { createCombobox, createSelect, createTagsInput, melt } from '@melt-ui/svelte';
 	import { Command, Search, X as Close, Check } from 'lucide-svelte';
 	import { flip } from 'svelte/animate';
-	import { cubicIn, cubicOut, quintOut } from 'svelte/easing';
-	import { crossfade, fade, fly, slide } from 'svelte/transition';
-
+	import { backOut, cubicOut } from 'svelte/easing';
+	import { fade, fly } from 'svelte/transition';
+	import type { Movie } from '$lib/index';
 	const {
 		elements: { menu, input, option, label },
 		states: { open, inputValue, touchedInput }
@@ -33,24 +33,19 @@
 		}
 	});
 
-	const options = [
-		'Caramel',
-		'Chocolate',
-		'Strawberry',
-		'Cookies & Cream',
-		'Basil',
-		'Bacon',
-		'Rosemary'
-	];
+	const options = ['Title', 'Genre', 'Director', 'Actor', 'Language', 'Country', 'Description'];
 
 	const {
 		elements: { trigger: selectTrigger, menu: selectMenu, option: selectOption },
 		states: { selected, open: selectOpen },
-		helpers: { isSelected }
+		helpers: { isSelected },
+		options: { positioning: selectPositioning }
 	} = createSelect<string, true>({
 		forceVisible: true,
 		positioning: {
-			placement: 'bottom-end'
+			placement: 'bottom-start',
+			overlap: true,
+			gutter: 8
 		},
 		multiple: true,
 		onSelectedChange: ({ curr, next }) => {
@@ -68,33 +63,58 @@
 				})
 			);
 
-			setTimeout(() => {
-				animateAddNewButton = !animateAddNewButton;
-			}, 160);
-
 			return next;
 		}
 	});
+
+	let dropdown: HTMLDivElement;
+
+	$: {
+		if (dropdown) {
+			console.log(dropdown);
+
+			$selectPositioning = {
+				placement: 'bottom-start',
+				overflowPadding: 24,
+				flip: false,
+				gutter: 8,
+				boundary: dropdown
+			};
+		}
+	}
+
+	let searchResult: Movie[] = [];
+
+	let debounceTimer: ReturnType<typeof setTimeout>;
+
+	const debounce = (callback: () => void) => {
+		clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(callback, 500);
+	};
+
+	$: {
+		if ($touchedInput) {
+			debounce(async () => {
+				const res = await fetch('/', {
+					method: 'POST',
+					body: JSON.stringify({
+						query: $inputValue,
+						tags: $selected?.map((item) => item.value) ?? []
+					})
+				}).then((res) => res.json());
+
+				searchResult = res;
+			});
+		} else {
+			searchResult = [];
+		}
+	}
 
 	const colors = {
 		black: '#515151',
 		blue: '#4e8fce',
 		grey: '#ebebeb'
 	};
-
-	let animateAddNewButton = false;
-
-	const [send, receive] = crossfade({
-		fallback() {
-			return {
-				duration: 100,
-				easing: cubicOut,
-				css: (t) => `
-					opacity: ${t};
-				`
-			};
-		}
-	});
 </script>
 
 <div class="wrapper">
@@ -117,16 +137,21 @@
 		</div>
 	</div>
 	{#if $open}
-		<div class="dropdown" use:melt={$menu} transition:fly={{ duration: 150, y: -5 }}>
+		<div
+			id="dropdown"
+			class="dropdown"
+			bind:this={dropdown}
+			use:melt={$menu}
+			transition:fly={{ duration: 150, y: -5 }}
+		>
 			<div class="filters">
 				<p>Searching For</p>
 				<div class="tags" use:melt={$root}>
 					{#each $tags as t (t.id)}
 						<div
 							class="animate"
-							animate:flip={{ duration: 150 }}
-							in:receive={{ key: t.id, delay: 0, duration: 1500, easing: cubicIn }}
-							out:send={{ key: t.id, delay: 0, duration: 1500, easing: cubicIn }}
+							transition:fade={{ duration: 150, easing: cubicOut }}
+							animate:flip={{ duration: 300, easing: backOut }}
 						>
 							{#if t.id === 'add'}
 								<button class="add-filter" use:melt={$selectTrigger} class:active={$selectOpen}>
@@ -168,6 +193,13 @@
 						</div>
 					{/if}
 				</div>
+			</div>
+			<div class="results">
+				{#each searchResult as result}
+					<p>
+						{result.title} - {result.release_date}
+					</p>
+				{/each}
 			</div>
 		</div>
 	{/if}
@@ -245,7 +277,7 @@
 		flex-direction: column;
 		border-radius: 1rem;
 		border: 1px solid $grey;
-		height: 20rem;
+		height: 30rem;
 
 		background-color: white;
 
@@ -259,6 +291,8 @@
 		display: flex;
 		flex-direction: column;
 		row-gap: 1rem;
+		border-bottom: 1px solid $grey;
+		padding-bottom: 1rem;
 	}
 
 	.tags {
@@ -281,6 +315,7 @@
 
 		button {
 			display: contents;
+			cursor: pointer;
 		}
 	}
 
@@ -290,10 +325,18 @@
 		padding: 0.125rem;
 		border-radius: 999px;
 
+		cursor: pointer;
+
+		background-color: white;
+
 		border: 1px solid $grey;
 		box-shadow: 0 1px 1px rgba($color: $black, $alpha: 0.2);
 
-		transition: box-shadow 300ms ease, border-color 300ms ease;
+		transition: box-shadow 300ms ease, border-color 300ms ease, background-color 150ms ease;
+
+		&:hover {
+			background-color: rgba($color: $grey, $alpha: 0.2);
+		}
 
 		&.active {
 			border: 1px solid transparent;
@@ -323,7 +366,6 @@
 		overflow: hidden;
 		width: 200px;
 		border: 1px solid $grey;
-		margin-top: 0.25rem;
 		border-radius: 0.5rem;
 		background-color: white;
 		box-shadow: 0 1px 1px rgba($color: $black, $alpha: 0.2);
@@ -378,6 +420,13 @@
 			display: grid;
 			place-items: center;
 		}
+	}
+
+	.results {
+		margin-top: 1rem;
+		display: flex;
+		flex-direction: column;
+		overflow: auto;
 	}
 
 	.key {
