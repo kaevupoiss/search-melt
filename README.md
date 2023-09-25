@@ -1,5 +1,5 @@
 # Amazing design by Ömer Erdoğan.
-[design]https://layers.to/layers/clmqbly8e0003mk0iz7lpv464
+[design](https://layers.to/layers/clmqbly8e0003mk0iz7lpv464)
 
 # create-svelte
 
