@@ -71,8 +71,6 @@
 
 	$: {
 		if (dropdown) {
-			console.log(dropdown);
-
 			$selectPositioning = {
 				placement: 'bottom-start',
 				overflowPadding: 24,
@@ -123,18 +121,20 @@
 		<div class="icons left">
 			<Search color={colors.black} />
 		</div>
-		<div class="icons right">
-			{#if $open}
-				<div class="key">
-					<Close color={colors.black} size={16} />
-				</div>
-			{:else}
-				<div class="key">
-					<Command color={colors.black} size={16} />
-				</div>
-				<div class="key">K</div>
-			{/if}
-		</div>
+		{#key $open}
+			<div class="icons right" in:fly={{ duration: 300, x: 5 }} out:fly={{ duration: 300, x: -5 }}>
+				{#if $open}
+					<div class="key">
+						<Close color={colors.black} size={16} />
+					</div>
+				{:else}
+					<div class="key">
+						<Command color={colors.black} size={16} />
+					</div>
+					<div class="key">K</div>
+				{/if}
+			</div>
+		{/key}
 	</div>
 	{#if $open}
 		<div
@@ -218,13 +218,17 @@
 
 	.wrapper {
 		display: grid;
-		place-items: center;
 		height: 100vh;
 		width: 100vw;
+		padding: 2rem;
 	}
 
 	.searchbox-container {
 		position: relative;
+		max-width: 800px;
+		height: max-content;
+		margin: 10rem auto;
+		width: 100%;
 
 		input {
 			display: flex;
@@ -233,7 +237,7 @@
 			border-radius: 0.75rem;
 			padding: 1rem 4rem;
 
-			min-width: 600px;
+			width: 100%;
 
 			background-color: white;
 
@@ -436,6 +440,7 @@
 		place-items: center;
 		border-radius: 0.5rem;
 
+		background-color: white;
 		border: 1px solid $grey;
 		box-shadow: 0 1px 1px rgba($color: $black, $alpha: 0.2);
 	}
