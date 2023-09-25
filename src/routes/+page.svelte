@@ -1,10 +1,13 @@
 <script lang="ts">
 	import { createCombobox, createSelect, createTagsInput, melt } from '@melt-ui/svelte';
-	import { Command, Search, X as Close, Check } from 'lucide-svelte';
+	import { Command, Search, X as Close, Check, Star } from 'lucide-svelte';
 	import { flip } from 'svelte/animate';
 	import { backOut, cubicOut } from 'svelte/easing';
 	import { fade, fly } from 'svelte/transition';
 	import type { Movie } from '$lib/index';
+
+	import Kebab from '$lib/Kebab.svelte';
+
 	const {
 		elements: { menu, input, option, label },
 		states: { open, inputValue, touchedInput }
@@ -196,9 +199,21 @@
 			</div>
 			<div class="results">
 				{#each searchResult as result}
-					<p>
-						{result.title} - {result.release_date}
-					</p>
+					<div class="result">
+						<div class="avatar" />
+						<p>
+							{result.title}
+						</p>
+						<div class="badge">
+							{result.rating.toFixed(1)}
+							<Star color={colors.blue} size={16} />
+						</div>
+						<Kebab />
+					</div>
+				{:else}
+					<div class="result">
+						<p>No Results...</p>
+					</div>
 				{/each}
 			</div>
 		</div>
@@ -218,17 +233,21 @@
 
 	.wrapper {
 		display: grid;
-		height: 100vh;
+		height: 100lvh;
 		width: 100vw;
 		padding: 2rem;
 	}
 
 	.searchbox-container {
 		position: relative;
-		max-width: 800px;
+		max-width: 600px;
 		height: max-content;
 		margin: 10rem auto;
 		width: 100%;
+
+		@media screen and (max-width: 800px) {
+			margin: 0 auto;
+		}
 
 		input {
 			display: flex;
@@ -287,7 +306,7 @@
 
 		box-shadow: 0 1px 1px rgba($color: $black, $alpha: 0.2);
 
-		padding: 1.5rem;
+		padding: 1rem;
 		margin-top: 0.5rem;
 	}
 
@@ -296,6 +315,7 @@
 		flex-direction: column;
 		row-gap: 1rem;
 		border-bottom: 1px solid $grey;
+		padding: 0.5rem;
 		padding-bottom: 1rem;
 	}
 
@@ -431,6 +451,51 @@
 		display: flex;
 		flex-direction: column;
 		overflow: auto;
+	}
+
+	.result {
+		display: flex;
+		align-items: center;
+		padding: 0.5rem;
+		column-gap: 0.5rem;
+		border-radius: 0.25rem;
+
+		transition: background-color 150ms ease;
+
+		> p {
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			flex-shrink: 100;
+		}
+
+		&:hover {
+			background-color: rgba($color: $grey, $alpha: 0.5);
+		}
+	}
+
+	.avatar {
+		display: block;
+		height: 1.5rem;
+		width: 1.5rem;
+		background-color: #4e8fce;
+		border-radius: 999px;
+	}
+
+	.badge {
+		margin-left: auto;
+		display: flex;
+		align-items: center;
+		padding: 0.125rem 0.5rem;
+		column-gap: 0.25rem;
+
+		background-color: white;
+		border-radius: 999px;
+
+		cursor: pointer;
+
+		border: 1px solid $grey;
+		box-shadow: 0 1px 1px rgba($color: $black, $alpha: 0.2);
 	}
 
 	.key {
